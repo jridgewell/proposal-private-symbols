@@ -43,15 +43,3 @@ With private symbols there is nothing new to learn. Methods keyed with private s
 Private static fields introduce a well-known hazard: accessing a private static field through `this` will throw a `TypeError` if `this` is a subclass.
 
 When accessing a property using private symbols the prototype chain is traversed and the hazard disappears.
-
-## Better interaction with simple wrapping proxies
-
-Users have developed patterns for proxy usage which do not require a full membrane. In these scenarios, proxies are used to wrap an application-domain object and intercede (by logging, for example) when code interacts with the object.
-
-A simple wrapping proxy will fail when it attempts to wrap an object that has private fields. Because private field access is based on identity, a `TypeError` will be thrown when code attempts to access the private state of the proxy wrapper.
-
-With private symbols, access is forwarded directly to the proxy target, allowing simple wrapping proxies to function as expected.
-
-## A better platform for generalized symbol-name syntactic sugar
-
-If we're going to have syntactic sugar for names, why not have sugar for regular symbols too?

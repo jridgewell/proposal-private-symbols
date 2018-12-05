@@ -24,7 +24,7 @@ Modify the list of invariants:
 - The returned list must not contain any duplicate entries.
 - The Type of each element of the returned List is either String or Symbol.
 - The returned list must not contain any symbols whose [[Private]] value is **true**.
-- The returned List must contain at least the keys of all non-configurable non-private own properties that have previously been observed.
+- The returned list must contain at least the keys of all non-configurable non-private own properties that have previously been observed.
 - If the object is non-extensible, the returned list must contain only the keys of all non-private own properties of the object that are observable using [[GetOwnProperty]].
 
 *The term "non-private own property" is not well-defined.*
@@ -45,12 +45,9 @@ Update identical steps for exotic object [[OwnPropertyKeys]]:
 
 ### 9.5.5 [[GetOwnProperty]] ( _P_ )
 
-Add after step 5:
+Add after step 1:
 
-- If Type(_P_) is Symbol and  _P_'s [[Private]] value is **true**, then
-  - Let _trap_ be **undefined**.
-- Else,
-  - Let _trap_ be ? GetMethod(_handler_, **"getOwnPropertyDescriptor"**).
+- If Type(_P_) is Symbol and  _P_'s [[Private]] value is **true**, throw a TypeError exception.
 
 Update similar steps for the following internal methods:
 
@@ -86,21 +83,3 @@ Modify note regarding invariants:
 Modify step 4:
 
 - Return a new unique Symbol value whose [[Description]] value is _descString_ and whose [[Private]] value is **false**.
-
-### 19.4.2 Properties of the Symbol Constructor
-
-#### Symbol.private ( _description_ )
-
-- If NewTarget is not **undefined**, throw a **TypeError** exception.
-- If _description_ is **undefined**, let _descString_ be **undefined**.
-- Else, let _descString_ be ? ToString(_description_).
-- Return a new unique Symbol value whose [[Description]] value is _descString_ and whose [[Private]] value is **true**.
-
-### 19.4.3 Properties of the Symbol Prototype Object
-
-#### get Symbol.prototype.private
-
-- Let _sym_ be ? thisSymbolValue(**this** value).
-- Let _isPrivate_ be _sym_'s [[Private]] value.
-- Assert: Type(_isPrivate_) is Boolean.
-- Return _isPrivate_.
