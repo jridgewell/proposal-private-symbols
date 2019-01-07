@@ -175,6 +175,8 @@ Yes. See [Private Symbols, or Private Fields](./symbols-or-fields.md).
     error is thrown if the handler returns any private symbols.
 - The proxy definitions of all internal methods that accept property
     keys are modified such that if the provided key is a private symbol,
-    then the operation throws without consulting the proxy handler.
+    then the operation is forwarded to the target without consulting the
+    proxy handler.
+
 
 See [Specification Changes](spec-changes.md) for more details.
