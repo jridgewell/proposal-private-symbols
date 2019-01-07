@@ -27,8 +27,8 @@ following exceptions:
 - Private symbols are not copied by `Object.assign` or object spread.
 - Private symbol-keyed properties are not affected by `Object.freeze`
     and `Object.seal`.
-- Private symbols cause proxies to throw without consulting trap
-    handlers nor the target.
+- Private symbols cause proxies to transparently interact with the
+    target without consulting trap handlers.
 
 See [Semantics](#semantics) for more details.
 
@@ -118,10 +118,9 @@ Proxies are not able to intercept private symbols, and proxy handlers
 are not allowed to return any private symbols from the `ownKeys` trap.
 
 For all of the proxy internal methods that accept a property key, if
-that property key is a private symbol, then the proxy immediately throws
-without consulting the handler.
-
-This is the easiest way to support the Membrane pattern.
+that property key is a private symbol, then the proxy handler is not
+consulted and the operation is forwarded directly to the target object,
+as if there were no handler defined for that trap.
 
 ### __*Can private symbols be used for branding?*__
 

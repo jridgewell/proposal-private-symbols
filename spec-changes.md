@@ -45,9 +45,12 @@ Update identical steps for exotic object [[OwnPropertyKeys]]:
 
 ### 9.5.5 [[GetOwnProperty]] ( _P_ )
 
-Add after step 1:
+Add after step 5:
 
-- If Type(_P_) is Symbol and  _P_'s [[Private]] value is **true**, throw a TypeError exception.
+- If Type(_P_) is Symbol and  _P_'s [[Private]] value is **true**, then
+  - Let _trap_ be **undefined**.
+- Else,
+  - Let _trap_ be ? GetMethod(_handler_, **"getOwnPropertyDescriptor"**).
 
 Update similar steps for the following internal methods:
 
