@@ -4,13 +4,11 @@
 
 This proposal allows for the encapsulation of "private" properties to
 lexical environments. These are known as **private symbols** because
-they behave similarly to regular symbols, but at this time there is no
-actual reification of private symbols. Private symbols can only be
-access through `base.#priv` syntax.
+they behave similarly to regular symbols.
 
 ```js
 class Example {
-  #foo = 1;
+  private #foo = 1;
   get foo() {
     return this.#foo;
   }
@@ -52,6 +50,141 @@ The proposal **does not** attempt to provide solutions for:
 - Static shape guarantees.
 
 These are both easily solvable by using `WeakSet`s.
+
+## Changes
+
+### API
+Added new method to global `Symbol` built-in object for creating "private"
+symbols:
+```js
+const privateSymbol = Symbol.private('private symbol');
+```
+The `Symbol` prototype has a `isPrivate` getter function which can be used
+to determine whether the symbol is private:
+```js
+const commonSymbol = Symbol('common symbol');
+assert(commonSymbol.isPrivate === false);
+
+const privateSymbol = Symbol.private('private symbol');
+assert(privateSymbol.isPrivate === true);
+```
+
+### Syntax
+While this API is enough to provide `hard-private` encapsulation for any
+particular object and class it's still not ergonomic for day-to-day usage.
+This section fulfills such gap, by providing new declaration keyword and
+variable type.
+
+#### Variable type
+Symbols, while still assignable to common `var`/`let`/`const` variables,
+now, in addition to already existing heavily different semantic and
+use-cases comparing with traditional variables, has its own special
+syntax - `#name`.
+**EVERY** variable that starts with `#`-prefix is `Symbol` **ALWAYS**.
+> **NOTE:** for now it's always `Symbol.private`, but it's still subject
+to discuss in committee.
+
+The main benefit of such approach is more expressive property access, which
+was kind of pain point of ES from very beginning (especially after
+introducing `Symbol`). Consider following code:
+```js
+console.log(obj[x]);
+```
+Without additional context you can't understand what this code does just
+by reading it. Is it array element access, or dynamic property access, or
+`Symboled` property access? In order to understand that you need to have
+more context, at least `x` variable declaration. And if `x` isn't constant
+declared with `const` keyword, you also have to check which values it might
+have by searching for all assignments to it.  
+In order to avoid most of misreadings, there are some best practices, like
+using `i`/`j`/`k`/`l` (and some other short names) for iterating in array,
+`someSpecificElementNumber` or `someSpecificElementIndex` to access specific
+element from array, `fieldName`/`fieldProperty` for dynamic property access
+and `somePropertySymbol` for `Symbol`ed property access.  
+`#`-prefixed variables will simplify this quiz, because
+```js
+console.log(obj[#x]);
+```
+and 
+```js
+console.log(obj.#x);
+```
+**ALWAYS** means accessing `#x` `Symbol`ed property of `obj`.  
+`#x` is always `Symbol`, it even can't be `null` or `undefined`. If it
+isn't declared before usage, early `ReferenceError` will be thrown
+(in same way as it works for `let`/`const` variables, including TDZ
+and shadowing).
+
+In classes (assuming [class-fields-proposal](https://github.com/tc39/proposal-class-fields)) and object literals it could be used in 2 ways: using existing `computed property syntax` like:
+```js
+class A {
+  [#x] = 1;
+}
+const obj = {
+  [#x]: 1,
+}
+```
+or using fully-equivalent shorthand syntax:
+```js
+class A {
+  #x = 1;
+}
+const obj = {
+  #x: 1,
+}
+```
+
+#### Declaration keyword
+In order to declare `#`-prefixed constant, new keyword is introduced -
+`private`. It's backwards compatible addition, because this keyword is
+already reserved.  
+It is allowed to use `private` keyword everywhere, where `const` is allowwed.
+And it behaves the same way as `const` declaration (including TDZ
+and shadowing), except this small list:  
+1. `private` keyword **MUST** be followed by `#`-prefixed name
+    ```js
+    private #x; // correct
+    private x; // throws syntax error
+    private [#y]; // throws syntax error
+    private [y]; // throws syntax error
+    ```
+2. `private` declaration **MUST NOT** be followed by assignment
+    ```js
+    private #x; // correct
+    private #y = 1; // throws syntax error
+    ```
+
+`private #x` declares `Symbol.private('#x')` that later could be
+accessed using `#x`constant.
+
+In addition to all above, `private` keyword could be used inside
+`object literals` and `class declarations`, using following syntax:
+```js
+class A {
+  private #x = 1;
+}
+const obj = {
+  private #x: 1,
+}
+```
+In this case two operations performed: declaring lexically
+scoped private symbol `#x` and defining corresponding property with
+`#x` key for object or class. To clarify, following code is fully equivalent
+to sample above:
+```js
+const A = (() => {
+  private #x;
+  return class A {
+    #x = 1;
+  }
+})();
+const obj = (() => {
+  private #x;
+  return {
+    #x: 1,
+  }
+})();
+```
 
 ## Some Questions and Answers
 
@@ -131,28 +264,29 @@ scenario, objects are branded by constructor functions so that method
 invocations can check whether the `this` value is an object that was
 actually created by the constructor function.
 
-`WeakSet`s are a natural solution to this.
+While `WeakSet`/`WeakMap`s are a natural solution to this, there is an
+option to use `Symbol.private` for same purpose.
 
 ```js
-const brand = new WeakSet();
-function check(...objects) {
-  for (const obj of objects) {
-    if (!brand.has(obj)) {
-      throw new TypeError('non instance');
-    }
-  }
-}
-
 class Example {
-  #foo = 1;
+  private #brand;
+  private #foo = 1;
 
   constructor() {
-    brand.add(this);
+    this.#brand = this;
   }
 
   equal(obj) {
-    check(this, obj);
+    Example.#check(this, obj);
     return this.#foo === obj.#foo;
+  }
+
+  static private #check(...objects) {
+    for (const obj of objects) {
+      if (obj !== obj.#brand) {
+        throw new TypeError('non instance');
+      }
+    }
   }
 }
 ```
